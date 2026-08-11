@@ -1,0 +1,50 @@
+{
+  "pluginAlias": "AirTouch2Plus",
+  "pluginType": "platform",
+  "singular": true,
+  "headerDisplay": "Homebridge plugin for the Polyaire AirTouch 2+ ducted air conditioning controller. Connects over the local network on port 9200.",
+  "schema": {
+    "type": "object",
+    "properties": {
+      "name": {
+        "title": "Name",
+        "type": "string",
+        "default": "AirTouch 2+",
+        "required": true
+      },
+      "host": {
+        "title": "AirTouch 2+ IP Address",
+        "type": "string",
+        "format": "ipv4",
+        "required": true,
+        "description": "The local IP address of your AirTouch 2+ console. A static DHCP lease is recommended."
+      },
+      "port": {
+        "title": "Port",
+        "type": "integer",
+        "default": 9200,
+        "required": false,
+        "description": "TCP port for the AirTouch 2+ API. Leave at 9200 unless you know otherwise."
+      },
+      "exposeZones": {
+        "title": "Expose Zones",
+        "type": "boolean",
+        "default": true,
+        "description": "Expose each zone (group) as a fan accessory with damper control."
+      },
+      "pollIntervalSeconds": {
+        "title": "Poll Interval (seconds)",
+        "type": "integer",
+        "default": 60,
+        "minimum": 15,
+        "description": "How often to refresh state from the console. Minimum 15 seconds."
+      },
+      "minSetpointStep": {
+        "title": "Setpoint Step",
+        "type": "number",
+        "default": 0.1,
+        "description": "Temperature increment for setpoint control."
+      }
+    }
+  }
+}
