@@ -155,9 +155,19 @@ export class AirTouchPlatform implements DynamicPlatformPlugin {
 
   private onGroupNames(names: Map<number, string>): void {
     for (const [id, name] of names) {
+      if (!name) continue;
       this.groupNames.set(id, name);
       const acc = this.zoneAccessories.get(id);
-      if (acc && name) acc.updateName(name);
+      if (acc) {
+        acc.updateName(name);
+        // Persist so the name is known immediately on the next restart,
+        // before group status/names are re-fetched.
+        const uuid = this.api.hap.uuid.generate(`at2p-zone-${id}`);
+        const platAcc = this.cachedAccessories.find((a) => a.UUID === uuid);
+        if (platAcc) {
+          platAcc.context.zoneName = name;
+        }
+      }
     }
   }
 
@@ -184,7 +194,14 @@ export class AirTouchPlatform implements DynamicPlatformPlugin {
   }
 
   private createZoneAccessory(status: GroupStatus): ZoneAccessory {
-    const name = this.groupNames.get(status.id) ?? `Zone ${status.id}`;
+    const uuid = this.api.hap.uuid.generate(`at2p-zone-${status.id}`);
+    const cached = this.cachedAccessories.find((a) => a.UUID === uuid);
+    // Prefer, in order: a name we already fetched this session, the name
+    // persisted from a previous run, then a generic fallback.
+    const name =
+      this.groupNames.get(status.id) ??
+      (cached?.context?.zoneName as string | undefined) ??
+      `Zone ${status.id}`;
     const accessory = this.getOrCreatePlatformAccessory(`at2p-zone-${status.id}`, name);
     this.log.info(`Discovered zone ${status.id} (${name})`);
     return new ZoneAccessory(this, accessory, this.client, status.id, status, name);

@@ -31,6 +31,7 @@ export class ZoneAccessory {
     this.accessory.getService(Service.AccessoryInformation)!
       .setCharacteristic(Characteristic.Manufacturer, 'Polyaire')
       .setCharacteristic(Characteristic.Model, 'AirTouch 2+ Zone')
+      .setCharacteristic(Characteristic.Name, name)
       .setCharacteristic(Characteristic.SerialNumber, `AT2P-ZN-${groupId}`);
 
     this.service =
@@ -38,6 +39,8 @@ export class ZoneAccessory {
       this.accessory.addService(Service.Fanv2);
 
     this.service.setCharacteristic(Characteristic.Name, name);
+    // ConfiguredName is what Apple Home shows as the user-facing tile name.
+    this.applyConfiguredName(name);
 
     this.service.getCharacteristic(Characteristic.Active)
       .onGet(() => this.getActive())
@@ -57,7 +60,27 @@ export class ZoneAccessory {
   }
 
   updateName(name: string): void {
-    this.service.updateCharacteristic(this.platform.Characteristic.Name, name);
+    const { Characteristic } = this.platform;
+    this.accessory.displayName = name;
+    this.accessory.getService(this.platform.Service.AccessoryInformation)
+      ?.updateCharacteristic(Characteristic.Name, name);
+    this.service.updateCharacteristic(Characteristic.Name, name);
+    this.applyConfiguredName(name);
+  }
+
+  /** Set ConfiguredName if the running HAP version supports it. */
+  private applyConfiguredName(name: string): void {
+    const { Characteristic } = this.platform;
+    const ConfiguredName = (Characteristic as unknown as { ConfiguredName?: unknown }).ConfiguredName;
+    if (!ConfiguredName) return;
+    try {
+      if (!this.service.testCharacteristic(ConfiguredName as never)) {
+        this.service.addOptionalCharacteristic(ConfiguredName as never);
+      }
+      this.service.updateCharacteristic(ConfiguredName as never, name);
+    } catch {
+      // ConfiguredName not supported on this service/HAP version; ignore.
+    }
   }
 
   private getActive(): CharacteristicValue {

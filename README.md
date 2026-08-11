@@ -76,6 +76,12 @@ Via the Homebridge UI (recommended), or add a platform block to `config.json`:
 - Auto mode reports as "idle" for current state because the protocol status frame doesn't distinguish whether the unit is actively heating or cooling in auto. Target state and setpoint still work.
 - Turbo / spill / bypass / timer flags are read from status but not surfaced as separate HomeKit controls in this version.
 - The plugin only reads the first AC ability record per response, matching the reference library's behaviour.
+- Some firmware (e.g. certain Daikin setups) reports a placeholder setpoint range like `16-16` in the ability message, with the real range held only in the console's preferences. The plugin detects an unusable range and falls back to a safe default; set `setpointMin`/`setpointMax` in config to match your controller's actual range.
+- Some consoles periodically broadcast control/status subtypes (e.g. `0x2b`) that are not documented and are not decoded by this plugin or the reference library. These are harmless and safely ignored; the plugin logs each distinct one once at debug level.
+
+## Connection stability
+
+The plugin uses aggressive TCP keepalive plus an application-level heartbeat (every 30s) and a staleness check (reconnects if no data is received for 90s), which keeps the link to the console healthy and recovers automatically from drops.
 
 ## Protocol verification
 

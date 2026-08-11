@@ -63,6 +63,8 @@ export class At2PlusClient extends EventEmitter {
   private readonly heartbeatIntervalMs = 30000;
   /** If no bytes are received for this long, consider the socket dead (ms). */
   private readonly stalenessTimeoutMs = 90000;
+  /** Distinct unhandled control/status subtypes we've already logged once. */
+  private readonly loggedUnknownSubtypes = new Set<number>();
 
   constructor(
     private readonly host: string,
@@ -275,12 +277,17 @@ export class At2PlusClient extends EventEmitter {
         } else if (subType === ControlStatusSubType.GROUP_STATUS) {
           this.emit('groupStatus', decodeGroupStatuses(subdata));
         } else {
-          // 0x2b, 0x31 etc. are subtypes neither this plugin nor the reference
-          // library decode. They're safely ignored; logging the raw bytes at
-          // debug level lets us identify them later if needed.
-          this.log.debug(
-            `Unknown control/status subtype: 0x${subType.toString(16)} (data: ${data.toString('hex')})`,
-          );
+          // Subtypes outside 0x20-0x23 (e.g. 0x2b) are broadcast by some
+          // consoles but decoded by neither this plugin nor the reference
+          // library. They're safely ignored. Log each distinct subtype only
+          // once (at debug) to avoid repeating every broadcast interval.
+          if (!this.loggedUnknownSubtypes.has(subType)) {
+            this.loggedUnknownSubtypes.add(subType);
+            this.log.debug(
+              `Ignoring unhandled control/status subtype 0x${subType.toString(16)} ` +
+              `(this is expected on some consoles; first sample: ${data.toString('hex')})`,
+            );
+          }
         }
       } else if (type === MessageType.EXTENDED) {
         if (data[0] !== 0xff) {
