@@ -12,6 +12,8 @@ export interface AirTouchPlatformConfig {
   exposeZones?: boolean;
   /** Expose a separate Fan tile for AC fan speed (Apple Home can't show it on the AC tile). Default true. */
   exposeFanSpeed?: boolean;
+  /** Expose a separate Fan tile that switches the AC into FAN-only mode (air circulation). Default true. */
+  exposeFanMode?: boolean;
   /** Minimum seconds between polling refreshes. Default 60. */
   pollIntervalSeconds?: number;
   /** Temperature step for setpoint. Default 0.5. */

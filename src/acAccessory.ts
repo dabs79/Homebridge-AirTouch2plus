@@ -25,6 +25,10 @@ export class AcAccessory {
   private status: AcStatus;
   private ability?: AcAbility;
   private readonly statusListeners: Array<() => void> = [];
+  /** Last temperature the unit reported that wasn't the "no reading" sentinel. */
+  private lastValidTemperature: number | null = null;
+  /** Optional externally-supplied temperature (e.g. a downstairs sensor). */
+  private externalTemperature: number | null = null;
 
   constructor(
     private readonly platform: AirTouchPlatform,
@@ -57,8 +61,8 @@ export class AcAccessory {
       .onSet((v) => this.setTargetState(v));
 
     this.service.getCharacteristic(Characteristic.CurrentTemperature)
-      .setProps({ minValue: -50, maxValue: 100, minStep: 0.1 })
-      .onGet(() => this.status.temperature ?? 0);
+      .setProps({ minValue: -100, maxValue: 100, minStep: 0.1 })
+      .onGet(() => this.getCurrentTemperature());
 
     // Set sane default setpoint ranges up front (protocol allows 10-35C).
     // setAbility() later narrows these to the unit's actual reported limits.
@@ -89,10 +93,17 @@ export class AcAccessory {
   updateStatus(status: AcStatus): void {
     this.status = status;
     const { Characteristic } = this.platform;
+    // Track the last "real" temperature. The unit sends all-zero temperature
+    // bytes (which decode to the protocol minimum, -50) when it has no reading
+    // to report — typically in FAN mode. Ignore that sentinel and keep the
+    // last good value so the tile doesn't flash -50.
+    if (this.isRealTemperature(status.temperature)) {
+      this.lastValidTemperature = status.temperature;
+    }
     this.service.updateCharacteristic(Characteristic.Active, this.getActive());
     this.service.updateCharacteristic(Characteristic.CurrentHeaterCoolerState, this.getCurrentState());
     this.service.updateCharacteristic(Characteristic.TargetHeaterCoolerState, this.getTargetState());
-    this.service.updateCharacteristic(Characteristic.CurrentTemperature, status.temperature ?? 0);
+    this.service.updateCharacteristic(Characteristic.CurrentTemperature, this.getCurrentTemperature());
     this.service.updateCharacteristic(Characteristic.RotationSpeed, this.getRotationSpeed());
     if (status.setPoint != null) {
       const target = this.currentTargetSetpointChar();
@@ -102,6 +113,41 @@ export class AcAccessory {
     }
     // Notify companion accessories (e.g. the fan-speed accessory).
     for (const cb of this.statusListeners) cb();
+  }
+
+  /** True if a reported temperature looks like a genuine reading. */
+  private isRealTemperature(t: number | null): t is number {
+    // -50 is the protocol minimum and is what all-zero bytes decode to; treat
+    // it (and anything at/below it) as "no reading".
+    return t != null && t > -50 && t < 100;
+  }
+
+  /**
+   * The temperature to show on the tile:
+   *  1. an externally-supplied reading (e.g. downstairs sensor), if set;
+   *  2. otherwise the unit's current reading, if it's real;
+   *  3. otherwise the last good reading we saw;
+   *  4. otherwise 0 (only before any real reading has arrived).
+   */
+  private getCurrentTemperature(): number {
+    if (this.externalTemperature != null) return this.externalTemperature;
+    if (this.isRealTemperature(this.status.temperature)) return this.status.temperature;
+    if (this.lastValidTemperature != null) return this.lastValidTemperature;
+    return 0;
+  }
+
+  /**
+   * Override the temperature shown on the AC tile with an external reading
+   * (e.g. a downstairs room sensor). Pass null to revert to the unit's own
+   * sensor. This is a display/reporting hook; the AirTouch hardware still
+   * regulates from its built-in sensor.
+   */
+  setExternalTemperature(celsius: number | null): void {
+    this.externalTemperature = celsius;
+    this.service.updateCharacteristic(
+      this.platform.Characteristic.CurrentTemperature,
+      this.getCurrentTemperature(),
+    );
   }
 
   /** Called once the AC ability is known: configure setpoint ranges & valid modes. */
@@ -319,5 +365,26 @@ export class AcAccessory {
   /** Register a callback fired whenever this AC's status updates. */
   onStatusUpdate(cb: () => void): void {
     this.statusListeners.push(cb);
+  }
+
+  // ---------------- public fan-mode API (used by FanModeAccessory) ----------------
+
+  /** True if the unit is powered on and in FAN mode. */
+  isFanOnlyActive(): boolean {
+    const on =
+      this.status.power === AcPower.ON ||
+      this.status.power === AcPower.AWAY_ON ||
+      this.status.power === AcPower.SLEEP;
+    return on && this.status.mode === AcMode.FAN;
+  }
+
+  /** Put the unit into FAN-only mode (powers on, sets FAN). */
+  setFanOnly(): void {
+    this.send(AcSetPower.ON, AcSetMode.FAN, AcFanSpeed.UNCHANGED, null);
+  }
+
+  /** Turn the whole AC off. */
+  turnOff(): void {
+    this.send(AcSetPower.OFF, AcSetMode.UNCHANGED, AcFanSpeed.UNCHANGED, null);
   }
 }

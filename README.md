@@ -71,6 +71,8 @@ Via the Homebridge UI (recommended), or add a platform block to `config.json`:
 
 **Fan speed → separate Fan tile.** The AC's fan speed is exposed as its own Fan accessory (e.g. "Daikin Fan Speed"). This exists because the Apple Home app does not render the fan-speed slider on a HeaterCooler tile — the control is present in the HomeKit data (and visible in apps like Eve), but Apple's UI hides it. The separate tile works around that: the slider snaps to the unit's supported speeds (e.g. Low/Med/High), and turning the tile off selects AUTO fan speed. It controls the same underlying AC fan speed, so it stays in sync with the AC. Disable it with `"exposeFanSpeed": false` if you use a third-party app that already shows the slider.
 
+**Fan-only mode → separate Fan tile.** HeaterCooler has no FAN target state (only Heat/Cool/Auto), so a separate "Fan Only" tile switches the AC into FAN mode for air circulation with no heating or cooling — handy overnight. Turning it on sets FAN mode; turning it off turns the AC off. Disable with `"exposeFanMode": false`.
+
 ## Notes and limitations
 
 - Auto mode reports as "idle" for current state because the protocol status frame doesn't distinguish whether the unit is actively heating or cooling in auto. Target state and setpoint still work.
@@ -78,6 +80,7 @@ Via the Homebridge UI (recommended), or add a platform block to `config.json`:
 - The plugin only reads the first AC ability record per response, matching the reference library's behaviour.
 - Some firmware (e.g. certain Daikin setups) reports a placeholder setpoint range like `16-16` in the ability message, with the real range held only in the console's preferences. The plugin detects an unusable range and falls back to a safe default; set `setpointMin`/`setpointMax` in config to match your controller's actual range.
 - Some consoles periodically broadcast control/status subtypes (e.g. `0x2b`) that are not documented and are not decoded by this plugin or the reference library. These are harmless and safely ignored; the plugin logs each distinct one once at debug level.
+- In FAN mode the unit reports no temperature (all-zero bytes, which decode to the protocol minimum). The plugin ignores that sentinel and holds the last real reading, so the tile doesn't show a spurious value. The AirTouch regulates heating/cooling from its own built-in sensor; to drive it from a different room's temperature, use a HomeKit automation from your own sensor to adjust the setpoint or zones.
 
 ## Connection stability
 

@@ -13,6 +13,7 @@ import { At2PlusClient, AT2PLUS_PORT, Logger } from './protocol/client';
 import { AcAccessory } from './acAccessory';
 import { ZoneAccessory } from './zoneAccessory';
 import { FanSpeedAccessory } from './fanSpeedAccessory';
+import { FanModeAccessory } from './fanModeAccessory';
 import type { AcStatus, GroupStatus, AcAbility } from './protocol/messages';
 
 export class AirTouchPlatform implements DynamicPlatformPlugin {
@@ -26,6 +27,7 @@ export class AirTouchPlatform implements DynamicPlatformPlugin {
   private readonly acAccessories = new Map<number, AcAccessory>();
   private readonly zoneAccessories = new Map<number, ZoneAccessory>();
   private readonly fanSpeedAccessories = new Map<number, FanSpeedAccessory>();
+  private readonly fanModeAccessories = new Map<number, FanModeAccessory>();
   private readonly pendingAbility = new Set<number>();
   private readonly groupNames = new Map<number, string>();
   private pollTimer?: NodeJS.Timeout;
@@ -148,6 +150,20 @@ export class AirTouchPlatform implements DynamicPlatformPlugin {
             new FanSpeedAccessory(this, fanAcc, acc, acName),
           );
           this.log.info(`Added fan-speed control for AC ${ability.acId}`);
+        }
+        // Companion Fan-only tile: switches the AC into FAN mode for air
+        // circulation with no heating/cooling. HeaterCooler has no FAN state.
+        if (this.config.exposeFanMode !== false && !this.fanModeAccessories.has(ability.acId)) {
+          const acName = ability.name || `AC ${ability.acId}`;
+          const fanModeAcc = this.getOrCreatePlatformAccessory(
+            `at2p-fanmode-${ability.acId}`,
+            `${acName} Fan Only`,
+          );
+          this.fanModeAccessories.set(
+            ability.acId,
+            new FanModeAccessory(this, fanModeAcc, acc, acName),
+          );
+          this.log.info(`Added fan-only control for AC ${ability.acId}`);
         }
       }
     }
