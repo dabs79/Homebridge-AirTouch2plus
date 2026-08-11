@@ -56,7 +56,21 @@ export class AcAccessory {
       .onSet((v) => this.setTargetState(v));
 
     this.service.getCharacteristic(Characteristic.CurrentTemperature)
+      .setProps({ minValue: -50, maxValue: 100, minStep: 0.1 })
       .onGet(() => this.status.temperature ?? 0);
+
+    // Set sane default setpoint ranges up front (protocol allows 10-35C).
+    // setAbility() later narrows these to the unit's actual reported limits.
+    // Without this, HomeKit's defaults (max 16C heat) reject real setpoints.
+    const defaultStep = this.platform.config.minSetpointStep ?? 0.5;
+    this.service.getCharacteristic(Characteristic.CoolingThresholdTemperature)
+      .setProps({ minValue: 10, maxValue: 35, minStep: defaultStep })
+      .onGet(() => this.status.setPoint ?? 24)
+      .onSet((v) => this.setSetpoint(v));
+    this.service.getCharacteristic(Characteristic.HeatingThresholdTemperature)
+      .setProps({ minValue: 10, maxValue: 35, minStep: defaultStep })
+      .onGet(() => this.status.setPoint ?? 21)
+      .onSet((v) => this.setSetpoint(v));
 
     // Fan speed as rotation speed (mapped to discrete AT2+ speeds).
     this.service.getCharacteristic(Characteristic.RotationSpeed)
@@ -93,27 +107,24 @@ export class AcAccessory {
     const limits = 'cool' in ability.setpointLimits
       ? ability.setpointLimits
       : { cool: ability.setpointLimits, heat: ability.setpointLimits };
-    const step = this.platform.config.minSetpointStep ?? 0.1;
+    const step = this.platform.config.minSetpointStep ?? 0.5;
 
+    // Narrow the ranges to the unit's actual reported limits.
+    // Handlers were already bound in the constructor.
     this.service.getCharacteristic(Characteristic.CoolingThresholdTemperature)
-      .setProps({ minValue: limits.cool.min, maxValue: limits.cool.max, minStep: step })
-      .onGet(() => this.status.setPoint ?? limits.cool.min)
-      .onSet((v) => this.setSetpoint(v));
-
+      .setProps({ minValue: limits.cool.min, maxValue: limits.cool.max, minStep: step });
     this.service.getCharacteristic(Characteristic.HeatingThresholdTemperature)
-      .setProps({ minValue: limits.heat.min, maxValue: limits.heat.max, minStep: step })
-      .onGet(() => this.status.setPoint ?? limits.heat.min)
-      .onSet((v) => this.setSetpoint(v));
+      .setProps({ minValue: limits.heat.min, maxValue: limits.heat.max, minStep: step });
 
-    // Restrict target states to modes the unit actually supports.
-    const valid: number[] = [];
+    // Restrict target states to modes the unit supports.
+    // AUTO is always included: FAN and DRY modes (which HeaterCooler can't
+    // represent) map to AUTO, so it must be a legal value even if the unit
+    // doesn't list AUTO as a "mode" per se.
     const S = Characteristic.TargetHeaterCoolerState;
-    if (ability.supportedModes.includes(AcSetMode.AUTO)) valid.push(S.AUTO);
-    if (ability.supportedModes.includes(AcSetMode.HEAT)) valid.push(S.HEAT);
-    if (ability.supportedModes.includes(AcSetMode.COOL)) valid.push(S.COOL);
-    if (valid.length) {
-      this.service.getCharacteristic(S).setProps({ validValues: valid });
-    }
+    const valid = new Set<number>([S.AUTO]);
+    if (ability.supportedModes.includes(AcSetMode.HEAT)) valid.add(S.HEAT);
+    if (ability.supportedModes.includes(AcSetMode.COOL)) valid.add(S.COOL);
+    this.service.getCharacteristic(S).setProps({ validValues: [...valid] });
   }
 
   // ---------------- getters ----------------

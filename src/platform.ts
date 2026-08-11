@@ -121,6 +121,13 @@ export class AirTouchPlatform implements DynamicPlatformPlugin {
   private onAcAbility(abilities: AcAbility[]): void {
     for (const ability of abilities) {
       this.pendingAbility.delete(ability.acId);
+      const limits = 'cool' in ability.setpointLimits
+        ? `cool ${ability.setpointLimits.cool.min}-${ability.setpointLimits.cool.max}, heat ${ability.setpointLimits.heat.min}-${ability.setpointLimits.heat.max}`
+        : `${ability.setpointLimits.min}-${ability.setpointLimits.max}`;
+      this.log.info(
+        `AC ${ability.acId} ability: name="${ability.name}", modes=[${ability.supportedModes.join(',')}], ` +
+        `fanSpeeds=[${ability.supportedFanSpeeds.join(',')}], setpoint=${limits}`,
+      );
       const acc = this.acAccessories.get(ability.acId);
       if (acc) acc.setAbility(ability);
     }

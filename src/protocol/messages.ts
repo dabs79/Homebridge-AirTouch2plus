@@ -66,8 +66,27 @@ export function parseHeader(bytes: Buffer): ParsedHeader {
   if (bytes[0] !== HEADER_MAGIC || bytes[1] !== HEADER_MAGIC) {
     throw new Error('Message header magic is invalid');
   }
-  const type = enumFrom(MessageType, bytes[5], MessageType.UNSET) as MessageType;
+  // Byte 2 is the address source; a received frame from the console is 0xB0 (SELF)
+  // in the reference, but some firmwares echo 0x80. Accept the known message types
+  // strictly instead — an invalid type means we locked onto a false 0x55 0x55.
+  const rawType = bytes[5];
+  if (rawType !== MessageType.CONTROL_STATUS && rawType !== MessageType.EXTENDED) {
+    throw new Error(`Invalid message type byte: 0x${rawType.toString(16)}`);
+  }
+  const type = rawType as MessageType;
+  const addressSource = bytes[2];
+  if (addressSource !== AddressSource.SELF && addressSource !== AddressSource.OTHER) {
+    throw new Error(`Invalid address source byte: 0x${addressSource.toString(16)}`);
+  }
   const addressMsgType = bytes[3] as AddressMsgType;
+  // Cross-check the address-msg-type byte against the message type. A genuine
+  // boundary always has these consistent; payload noise almost never will.
+  if (type === MessageType.CONTROL_STATUS && addressMsgType !== AddressMsgType.NORMAL) {
+    throw new Error('Address/type mismatch for control-status frame');
+  }
+  if (type === MessageType.EXTENDED && addressMsgType !== AddressMsgType.EXTENDED) {
+    throw new Error('Address/type mismatch for extended frame');
+  }
   const dataLength = bytes.readUInt16BE(6);
   return { addressMsgType, type, dataLength };
 }
