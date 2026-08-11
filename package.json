@@ -1,7 +1,7 @@
 {
   "name": "homebridge-airtouch2plus",
   "displayName": "AirTouch 2+",
-  "version": "1.7.1",
+  "version": "1.8.0",
   "description": "Homebridge plugin for the Polyaire AirTouch 2+ ducted AC controller (firmware API port 9200). Exposes AC, zones, fan speed, and fan-only/dry modes to HomeKit.",
   "license": "MIT",
   "author": {
@@ -26,7 +26,7 @@
   "main": "dist/index.js",
   "engines": {
     "homebridge": ">=1.6.0 || ^2.0.0-beta.0",
-    "node": ">=18.0.0"
+    "node": ">=22.0.0"
   },
   "files": [
     "dist",
