@@ -69,6 +69,8 @@ Via the Homebridge UI (recommended), or add a platform block to `config.json`:
 
 **Zone → Fan.** A zone's damper percentage is the fan's rotation speed. Setting speed to 0% turns the zone off; any non-zero speed turns it on and sets the damper. Zones without an ITC temperature sensor are damper-percentage controlled, which is exactly this behaviour.
 
+**Fan speed → separate Fan tile.** The AC's fan speed is exposed as its own Fan accessory (e.g. "Daikin Fan Speed"). This exists because the Apple Home app does not render the fan-speed slider on a HeaterCooler tile — the control is present in the HomeKit data (and visible in apps like Eve), but Apple's UI hides it. The separate tile works around that: the slider snaps to the unit's supported speeds (e.g. Low/Med/High), and turning the tile off selects AUTO fan speed. It controls the same underlying AC fan speed, so it stays in sync with the AC. Disable it with `"exposeFanSpeed": false` if you use a third-party app that already shows the slider.
+
 ## Notes and limitations
 
 - Auto mode reports as "idle" for current state because the protocol status frame doesn't distinguish whether the unit is actively heating or cooling in auto. Target state and setpoint still work.

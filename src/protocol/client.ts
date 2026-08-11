@@ -56,6 +56,13 @@ export class At2PlusClient extends EventEmitter {
   private reconnectTimer: NodeJS.Timeout | null = null;
   private reconnectDelayMs = 1000;
   private readonly maxReconnectDelayMs = 30000;
+  // Connection-health tracking
+  private heartbeatTimer: NodeJS.Timeout | null = null;
+  private lastActivity = 0;
+  /** How often to send a heartbeat request and check liveness (ms). */
+  private readonly heartbeatIntervalMs = 30000;
+  /** If no bytes are received for this long, consider the socket dead (ms). */
+  private readonly stalenessTimeoutMs = 90000;
 
   constructor(
     private readonly host: string,
@@ -72,6 +79,7 @@ export class At2PlusClient extends EventEmitter {
 
   stop(): void {
     this.stopped = true;
+    this.stopHeartbeat();
     if (this.reconnectTimer) {
       clearTimeout(this.reconnectTimer);
       this.reconnectTimer = null;
@@ -89,18 +97,29 @@ export class At2PlusClient extends EventEmitter {
     this.socket = socket;
     this.rxBuffer = Buffer.alloc(0);
 
-    socket.setKeepAlive(true, 10000);
+    // Aggressive TCP keepalive: probe after 5s idle. Node only exposes the
+    // idle delay (maps to TCP_KEEPIDLE on Linux); the interval/count aren't
+    // settable from Node, so we back this up with an application-level
+    // heartbeat and a staleness check below. The reference client uses
+    // idle=5s, interval=1s, count=5.
+    socket.setKeepAlive(true, 5000);
+    socket.setNoDelay(true);
 
     socket.on('connect', () => {
       this.log.info(`Connected to AirTouch 2+ at ${this.host}:${this.port}`);
       this.reconnectDelayMs = 1000;
+      this.lastActivity = Date.now();
+      this.startHeartbeat();
       this.emit('connected');
       // On connect the reference client requests groups then ACs.
       this.send(requestGroupStatusMessage());
       this.send(requestAcStatusMessage());
     });
 
-    socket.on('data', (chunk: Buffer) => this.onData(chunk));
+    socket.on('data', (chunk: Buffer) => {
+      this.lastActivity = Date.now();
+      this.onData(chunk);
+    });
 
     socket.on('error', (err) => {
       this.log.warn(`Socket error: ${err.message}`);
@@ -108,12 +127,46 @@ export class At2PlusClient extends EventEmitter {
 
     socket.on('close', () => {
       this.log.warn('Connection closed');
+      this.stopHeartbeat();
       this.emit('disconnected');
       this.socket = null;
       this.scheduleReconnect();
     });
 
     socket.connect(this.port, this.host);
+  }
+
+  /**
+   * Periodic heartbeat: sends a lightweight status request so the console sees
+   * us as active, and tears down the socket if no data has arrived for too long
+   * (catches half-open connections that never surface an error on their own).
+   */
+  private startHeartbeat(): void {
+    this.stopHeartbeat();
+    this.heartbeatTimer = setInterval(() => {
+      if (!this.socket || this.socket.destroyed) return;
+      const idle = Date.now() - this.lastActivity;
+      if (idle > this.stalenessTimeoutMs) {
+        this.log.warn(
+          `No data from console for ${Math.round(idle / 1000)}s; assuming stale connection and reconnecting`,
+        );
+        // Destroy triggers 'close', which schedules a reconnect.
+        this.socket.destroy();
+        return;
+      }
+      // Lightweight keepalive request. A well-formed request keeps the console
+      // talking and gives us return traffic to confirm the link is alive.
+      this.send(requestGroupStatusMessage());
+    }, this.heartbeatIntervalMs);
+    // Don't let the heartbeat timer keep the Node process alive on shutdown.
+    this.heartbeatTimer.unref?.();
+  }
+
+  private stopHeartbeat(): void {
+    if (this.heartbeatTimer) {
+      clearInterval(this.heartbeatTimer);
+      this.heartbeatTimer = null;
+    }
   }
 
   private scheduleReconnect(): void {
@@ -222,7 +275,12 @@ export class At2PlusClient extends EventEmitter {
         } else if (subType === ControlStatusSubType.GROUP_STATUS) {
           this.emit('groupStatus', decodeGroupStatuses(subdata));
         } else {
-          this.log.debug(`Unknown control/status subtype: 0x${subType.toString(16)}`);
+          // 0x2b, 0x31 etc. are subtypes neither this plugin nor the reference
+          // library decode. They're safely ignored; logging the raw bytes at
+          // debug level lets us identify them later if needed.
+          this.log.debug(
+            `Unknown control/status subtype: 0x${subType.toString(16)} (data: ${data.toString('hex')})`,
+          );
         }
       } else if (type === MessageType.EXTENDED) {
         if (data[0] !== 0xff) {

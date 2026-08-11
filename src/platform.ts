@@ -12,6 +12,7 @@ import { PLATFORM_NAME, PLUGIN_NAME, AirTouchPlatformConfig } from './settings';
 import { At2PlusClient, AT2PLUS_PORT, Logger } from './protocol/client';
 import { AcAccessory } from './acAccessory';
 import { ZoneAccessory } from './zoneAccessory';
+import { FanSpeedAccessory } from './fanSpeedAccessory';
 import type { AcStatus, GroupStatus, AcAbility } from './protocol/messages';
 
 export class AirTouchPlatform implements DynamicPlatformPlugin {
@@ -24,6 +25,7 @@ export class AirTouchPlatform implements DynamicPlatformPlugin {
   private client!: At2PlusClient;
   private readonly acAccessories = new Map<number, AcAccessory>();
   private readonly zoneAccessories = new Map<number, ZoneAccessory>();
+  private readonly fanSpeedAccessories = new Map<number, FanSpeedAccessory>();
   private readonly pendingAbility = new Set<number>();
   private readonly groupNames = new Map<number, string>();
   private pollTimer?: NodeJS.Timeout;
@@ -130,7 +132,24 @@ export class AirTouchPlatform implements DynamicPlatformPlugin {
         `fanSpeeds=[${ability.supportedFanSpeeds.join(',')}], setpoint=${limits}`,
       );
       const acc = this.acAccessories.get(ability.acId);
-      if (acc) acc.setAbility(ability);
+      if (acc) {
+        acc.setAbility(ability);
+        // Create the companion fan-speed accessory now that we know the
+        // supported speeds. Apple Home can't show the fan slider on the
+        // HeaterCooler tile, so this surfaces it as its own Fan tile.
+        if (this.config.exposeFanSpeed !== false && !this.fanSpeedAccessories.has(ability.acId)) {
+          const acName = ability.name || `AC ${ability.acId}`;
+          const fanAcc = this.getOrCreatePlatformAccessory(
+            `at2p-fanspeed-${ability.acId}`,
+            `${acName} Fan Speed`,
+          );
+          this.fanSpeedAccessories.set(
+            ability.acId,
+            new FanSpeedAccessory(this, fanAcc, acc, acName),
+          );
+          this.log.info(`Added fan-speed control for AC ${ability.acId}`);
+        }
+      }
     }
   }
 

@@ -32,6 +32,12 @@
         "default": true,
         "description": "Expose each zone (group) as a fan accessory with damper control."
       },
+      "exposeFanSpeed": {
+        "title": "Expose Fan Speed Control",
+        "type": "boolean",
+        "default": true,
+        "description": "Adds a separate Fan tile to control AC fan speed (Low/Med/High/Auto). Apple Home cannot show the fan slider on the AC tile itself, so this provides it as its own accessory."
+      },
       "pollIntervalSeconds": {
         "title": "Poll Interval (seconds)",
         "type": "integer",
