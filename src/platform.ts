@@ -72,12 +72,6 @@ export class AirTouchPlatform implements DynamicPlatformPlugin {
     this.client.on('groupStatus', (s) => this.onGroupStatus(s));
     this.client.on('acAbility', (a) => this.onAcAbility(a));
     this.client.on('groupNames', (n) => this.onGroupNames(n));
-    this.client.on('connected', () => {
-      if (this.config.exposeZones !== false) {
-        // Request names shortly after connect for zone labelling.
-        setTimeout(() => this.client.requestGroupNames(), 1000);
-      }
-    });
 
     this.client.start();
 
@@ -108,6 +102,7 @@ export class AirTouchPlatform implements DynamicPlatformPlugin {
 
   private onGroupStatus(statuses: GroupStatus[]): void {
     if (this.config.exposeZones === false) return;
+    const firstStatus = this.zoneAccessories.size === 0;
     for (const status of statuses) {
       let acc = this.zoneAccessories.get(status.id);
       if (!acc) {
@@ -115,6 +110,12 @@ export class AirTouchPlatform implements DynamicPlatformPlugin {
         this.zoneAccessories.set(status.id, acc);
       }
       acc.updateStatus(status);
+    }
+    // The reference client requests names right after the first group status,
+    // not on a timer — the console answers reliably in that sequence.
+    if (firstStatus && this.zoneAccessories.size > 0) {
+      this.log.debug('Requesting group names');
+      this.client.requestGroupNames();
     }
   }
 

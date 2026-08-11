@@ -61,15 +61,20 @@ export class AcAccessory {
 
     // Set sane default setpoint ranges up front (protocol allows 10-35C).
     // setAbility() later narrows these to the unit's actual reported limits.
-    // Without this, HomeKit's defaults (max 16C heat) reject real setpoints.
+    // IMPORTANT: set a valid initial value BEFORE setProps, otherwise HAP
+    // validates the characteristic's default (0) against the new min and warns.
     const defaultStep = this.platform.config.minSetpointStep ?? 0.5;
-    this.service.getCharacteristic(Characteristic.CoolingThresholdTemperature)
+    const coolChar = this.service.getCharacteristic(Characteristic.CoolingThresholdTemperature);
+    coolChar.updateValue(24);
+    coolChar
       .setProps({ minValue: 10, maxValue: 35, minStep: defaultStep })
-      .onGet(() => this.status.setPoint ?? 24)
+      .onGet(() => this.clampSetpoint(this.status.setPoint ?? 24, coolChar))
       .onSet((v) => this.setSetpoint(v));
-    this.service.getCharacteristic(Characteristic.HeatingThresholdTemperature)
+    const heatChar = this.service.getCharacteristic(Characteristic.HeatingThresholdTemperature);
+    heatChar.updateValue(21);
+    heatChar
       .setProps({ minValue: 10, maxValue: 35, minStep: defaultStep })
-      .onGet(() => this.status.setPoint ?? 21)
+      .onGet(() => this.clampSetpoint(this.status.setPoint ?? 21, heatChar))
       .onSet((v) => this.setSetpoint(v));
 
     // Fan speed as rotation speed (mapped to discrete AT2+ speeds).
@@ -104,17 +109,30 @@ export class AcAccessory {
       this.service.setCharacteristic(Characteristic.Name, ability.name);
     }
 
-    const limits = 'cool' in ability.setpointLimits
+    const raw = 'cool' in ability.setpointLimits
       ? ability.setpointLimits
       : { cool: ability.setpointLimits, heat: ability.setpointLimits };
     const step = this.platform.config.minSetpointStep ?? 0.5;
 
-    // Narrow the ranges to the unit's actual reported limits.
-    // Handlers were already bound in the constructor.
-    this.service.getCharacteristic(Characteristic.CoolingThresholdTemperature)
-      .setProps({ minValue: limits.cool.min, maxValue: limits.cool.max, minStep: step });
-    this.service.getCharacteristic(Characteristic.HeatingThresholdTemperature)
-      .setProps({ minValue: limits.heat.min, maxValue: limits.heat.max, minStep: step });
+    // Sanitise the reported limits. Some firmware (incl. certain Daikin setups)
+    // reports a placeholder/zero-width range like 16-16 in the ability message,
+    // with the real range living in the console preferences. Reject anything
+    // that isn't a plausible, positive-width range and fall back to a safe
+    // default (configurable), so HomeKit always gets a usable slider range.
+    const fallbackMin = this.platform.config.setpointMin ?? 10;
+    const fallbackMax = this.platform.config.setpointMax ?? 35;
+    const cool = this.sanitiseRange(raw.cool.min, raw.cool.max, fallbackMin, fallbackMax);
+    const heat = this.sanitiseRange(raw.heat.min, raw.heat.max, fallbackMin, fallbackMax);
+
+    // Update current values into range BEFORE narrowing props, so HAP doesn't
+    // reject the existing value against the new min/max.
+    const coolChar = this.service.getCharacteristic(Characteristic.CoolingThresholdTemperature);
+    coolChar.updateValue(this.clampTo(coolChar.value as number, cool.min, cool.max));
+    coolChar.setProps({ minValue: cool.min, maxValue: cool.max, minStep: step });
+
+    const heatChar = this.service.getCharacteristic(Characteristic.HeatingThresholdTemperature);
+    heatChar.updateValue(this.clampTo(heatChar.value as number, heat.min, heat.max));
+    heatChar.setProps({ minValue: heat.min, maxValue: heat.max, minStep: step });
 
     // Restrict target states to modes the unit supports.
     // AUTO is always included: FAN and DRY modes (which HeaterCooler can't
@@ -125,6 +143,42 @@ export class AcAccessory {
     if (ability.supportedModes.includes(AcSetMode.HEAT)) valid.add(S.HEAT);
     if (ability.supportedModes.includes(AcSetMode.COOL)) valid.add(S.COOL);
     this.service.getCharacteristic(S).setProps({ validValues: [...valid] });
+  }
+
+  /** Return a usable [min,max] range, falling back if the reported one is implausible. */
+  private sanitiseRange(
+    min: number,
+    max: number,
+    fallbackMin: number,
+    fallbackMax: number,
+  ): { min: number; max: number } {
+    const plausible =
+      Number.isFinite(min) &&
+      Number.isFinite(max) &&
+      max - min >= 1 && // needs positive, non-trivial width
+      min >= 5 &&
+      max <= 40;
+    if (!plausible) {
+      this.platform.log.warn(
+        `AC ${this.acId} reported an unusable setpoint range (${min}-${max}); ` +
+        `using ${fallbackMin}-${fallbackMax} instead. ` +
+        `Adjust with "setpointMin"/"setpointMax" in config if your unit differs.`,
+      );
+      return { min: fallbackMin, max: fallbackMax };
+    }
+    return { min, max };
+  }
+
+  private clampTo(value: number, min: number, max: number): number {
+    if (!Number.isFinite(value)) return min;
+    return Math.min(max, Math.max(min, value));
+  }
+
+  /** Clamp a setpoint to the characteristic's current props range for onGet. */
+  private clampSetpoint(value: number, char: { props: { minValue?: number; maxValue?: number } }): number {
+    const min = char.props.minValue ?? 10;
+    const max = char.props.maxValue ?? 35;
+    return this.clampTo(value, min, max);
   }
 
   // ---------------- getters ----------------

@@ -232,8 +232,10 @@ export class At2PlusClient extends EventEmitter {
         const subType = data[1] as ExtendedMessageSubType;
         const subdata = data.subarray(2);
         if (subType === ExtendedMessageSubType.ABILITY) {
+          this.log.debug(`Ability raw subdata: ${subdata.toString('hex')}`);
           this.emit('acAbility', decodeAcAbilityMessage(subdata));
         } else if (subType === ExtendedMessageSubType.GROUP_NAME) {
+          this.log.debug(`Group names raw subdata: ${subdata.toString('hex')}`);
           this.emit('groupNames', decodeGroupNames(subdata));
         } else if (subType === ExtendedMessageSubType.ERROR) {
           this.log.debug('Received error extended message (not implemented)');

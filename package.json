@@ -1,9 +1,18 @@
 {
   "name": "homebridge-airtouch2plus",
   "displayName": "AirTouch 2+",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Homebridge plugin for the Polyaire AirTouch 2+ ducted AC controller (firmware API port 9200).",
   "license": "MIT",
+  "author": "dabs79 (https://github.com/dabs79)",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dabs79/Homebridge-AirTouch2plus.git"
+  },
+  "bugs": {
+    "url": "https://github.com/dabs79/Homebridge-AirTouch2plus/issues"
+  },
+  "homepage": "https://github.com/dabs79/Homebridge-AirTouch2plus#readme",
   "type": "commonjs",
   "main": "dist/index.js",
   "engines": {
@@ -25,9 +34,9 @@
     "hvac"
   ],
   "devDependencies": {
-    "@types/node": "^20.12.0",
-    "homebridge": "^1.8.0",
+    "@types/node": "^20.19.43",
+    "homebridge": "^1.11.4",
     "tsx": "^4.23.12",
-    "typescript": "^5.4.0"
+    "typescript": "^5.9.3"
   }
 }

@@ -42,8 +42,20 @@
       "minSetpointStep": {
         "title": "Setpoint Step",
         "type": "number",
-        "default": 0.1,
+        "default": 0.5,
         "description": "Temperature increment for setpoint control."
+      },
+      "setpointMin": {
+        "title": "Fallback Minimum Setpoint (°C)",
+        "type": "integer",
+        "default": 10,
+        "description": "Used only if your unit reports an unusable setpoint range. Your controller's real range (check Preferences) is typically 12."
+      },
+      "setpointMax": {
+        "title": "Fallback Maximum Setpoint (°C)",
+        "type": "integer",
+        "default": 35,
+        "description": "Used only if your unit reports an unusable setpoint range."
       }
     }
   }

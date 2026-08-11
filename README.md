@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # homebridge-airtouch2plus
 
 A [Homebridge](https://homebridge.io) plugin for the **Polyaire AirTouch 2+** ducted air conditioning controller.
@@ -82,12 +81,10 @@ The protocol layer under `src/protocol` has a verification harness (`npm run ver
 
 ## Credits
 
+Plugin developed and maintained by **[@dabs79](https://github.com/dabs79)**.
+
 Protocol reverse-engineering and the reference implementation are the work of **[@nathanvdh](https://github.com/nathanvdh)** ([`airtouch2-python`](https://github.com/nathanvdh/airtouch2-python) and the Home Assistant integrations). This plugin is an independent port of that protocol to a Homebridge platform.
 
 ## License
 
 MIT
-=======
-# Homebridge-AirTouch2plus
-HomeBridge plugin for AirTouch2+ AC Controllers
->>>>>>> 562008a61f898ed8babc33ced3317357d2dfe79a

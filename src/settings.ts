@@ -12,6 +12,10 @@ export interface AirTouchPlatformConfig {
   exposeZones?: boolean;
   /** Minimum seconds between polling refreshes. Default 60. */
   pollIntervalSeconds?: number;
-  /** Temperature step for setpoint. Default 0.1 (matches protocol resolution). */
+  /** Temperature step for setpoint. Default 0.5. */
   minSetpointStep?: number;
+  /** Fallback minimum setpoint if the unit reports an unusable range. Default 10. */
+  setpointMin?: number;
+  /** Fallback maximum setpoint if the unit reports an unusable range. Default 35. */
+  setpointMax?: number;
 }
