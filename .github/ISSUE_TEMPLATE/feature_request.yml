@@ -1,0 +1,44 @@
+name: Feature Request
+description: Suggest a new capability or improvement
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the suggestion. Please describe what you'd like and why — real-world use cases help a lot in deciding how (and whether) to build something.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem would this solve?
+      description: What are you trying to do that the plugin doesn't currently support?
+      placeholder: |
+        e.g. I'd like to control the AC's turbo mode from the Home app.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What would you like to happen?
+      description: Describe the feature or behaviour you have in mind.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives you've considered
+      description: Any workarounds you currently use, or other ways this could work.
+    validations:
+      required: false
+
+  - type: input
+    id: ac-model
+    attributes:
+      label: AC make and model
+      description: Helpful if the request relates to a hardware-specific capability.
+      placeholder: e.g. Daikin FBA140B-VCV
+    validations:
+      required: false

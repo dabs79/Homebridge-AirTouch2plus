@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Homebridge Discord
+    url: https://discord.com/invite/homebridge-432663330281226270
+    about: General Homebridge help and setup questions that aren't specific to this plugin.
+  - name: Question or usage help
+    url: https://github.com/dabs79/Homebridge-AirTouch2plus/discussions
+    about: For how-to questions and general discussion (enable Discussions on the repo to use this).

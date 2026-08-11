@@ -1,0 +1,124 @@
+name: Bug Report
+description: Something isn't working as expected
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug. The more detail you give here, the faster it can be diagnosed — most issues come down to a specific log line, so please include your logs below.
+
+  - type: checkboxes
+    id: preflight
+    attributes:
+      label: Before submitting
+      description: A couple of quick checks that resolve most reports.
+      options:
+        - label: I'm running the latest version of the plugin
+          required: true
+        - label: I searched existing issues and didn't find a duplicate
+          required: true
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: A clear description of the problem, and what you expected to happen instead.
+      placeholder: |
+        e.g. When I set the AC to Cool from the Home app, it turns on but stays in Fan mode.
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: What did you do, step by step, that led to the problem?
+      placeholder: |
+        1. Open the Home app
+        2. Tap the Daikin tile
+        3. Set mode to Cool
+        4. ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Homebridge logs
+      description: >
+        Paste the relevant Homebridge log output. Turn on debug logging first
+        (Homebridge UI → Settings → enable "Homebridge Debug Mode -D"), reproduce
+        the problem, then copy the lines around it. Logs are the single most
+        useful thing for diagnosis.
+      render: shell
+    validations:
+      required: true
+
+  - type: input
+    id: plugin-version
+    attributes:
+      label: Plugin version
+      description: Shown on the plugin's card in the Homebridge UI.
+      placeholder: e.g. 1.7.1
+    validations:
+      required: true
+
+  - type: input
+    id: homebridge-version
+    attributes:
+      label: Homebridge version
+      placeholder: e.g. 2.3.1
+    validations:
+      required: true
+
+  - type: input
+    id: node-version
+    attributes:
+      label: Node.js version
+      description: Run `node -v` if you're not sure.
+      placeholder: e.g. 20.11.0
+    validations:
+      required: true
+
+  - type: dropdown
+    id: platform
+    attributes:
+      label: What OS is Homebridge running on?
+      options:
+        - Linux (Raspberry Pi / Debian / Ubuntu)
+        - Docker
+        - Windows
+        - macOS
+        - Other / not sure
+    validations:
+      required: true
+
+  - type: input
+    id: ac-model
+    attributes:
+      label: AC make and model
+      description: The brand and model of the AC unit behind your AirTouch 2+.
+      placeholder: e.g. Daikin FBA140B-VCV
+    validations:
+      required: false
+
+  - type: textarea
+    id: config
+    attributes:
+      label: Plugin configuration
+      description: >
+        Paste your AirTouch 2+ platform config block. Remove anything you consider
+        sensitive — though note the console IP is a private LAN address and is
+        usually fine to include, as it helps diagnose connection issues.
+      render: json
+    validations:
+      required: false
+
+  - type: textarea
+    id: extra
+    attributes:
+      label: Anything else?
+      description: Screenshots, number of zones, firmware version, or any other context.
+    validations:
+      required: false
