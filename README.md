@@ -71,7 +71,7 @@ Via the Homebridge UI (recommended), or add a platform block to `config.json`:
 
 **Fan speed → separate Fan tile.** The AC's fan speed is exposed as its own Fan accessory (e.g. "Daikin Fan Speed"). This exists because the Apple Home app does not render the fan-speed slider on a HeaterCooler tile — the control is present in the HomeKit data (and visible in apps like Eve), but Apple's UI hides it. The separate tile works around that: the slider snaps to the unit's supported speeds (e.g. Low/Med/High), and turning the tile off selects AUTO fan speed. It controls the same underlying AC fan speed, so it stays in sync with the AC. Disable it with `"exposeFanSpeed": false` if you use a third-party app that already shows the slider.
 
-**Fan-only mode → separate Fan tile.** HeaterCooler has no FAN target state (only Heat/Cool/Auto), so a separate "Fan Only" tile switches the AC into FAN mode for air circulation with no heating or cooling — handy overnight. Turning it on sets FAN mode; turning it off turns the AC off. Disable with `"exposeFanMode": false`.
+**Fan-only / Dry mode → separate tiles.** HeaterCooler has no FAN or DRY target state (only Heat/Cool/Auto), so separate tiles switch the AC into those modes: "Fan Only" for air circulation with no heating/cooling (handy overnight), and "Dry" for dehumidify. Turning a tile on sets that mode; turning it off turns the AC off. Disable with `"exposeFanMode": false` / `"exposeDryMode": false`.
 
 ## Notes and limitations
 

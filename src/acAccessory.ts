@@ -39,6 +39,9 @@ export class AcAccessory {
   ) {
     this.status = initialStatus;
     const { Service, Characteristic } = this.platform;
+    if (this.isRealTemperature(initialStatus.temperature)) {
+      this.lastValidTemperature = initialStatus.temperature;
+    }
 
     this.accessory.getService(Service.AccessoryInformation)!
       .setCharacteristic(Characteristic.Manufacturer, 'Polyaire')
@@ -60,8 +63,16 @@ export class AcAccessory {
       .onGet(() => this.getTargetState())
       .onSet((v) => this.setTargetState(v));
 
-    this.service.getCharacteristic(Characteristic.CurrentTemperature)
-      .setProps({ minValue: -100, maxValue: 100, minStep: 0.1 })
+    const tempChar = this.service.getCharacteristic(Characteristic.CurrentTemperature);
+    // Seed with a plausible value BEFORE any reading so HomeKit never displays
+    // the characteristic's floor. Use a modest lower bound (-20C) that covers
+    // real-world room temps without letting the "no reading" sentinel show.
+    const seed = this.isRealTemperature(initialStatus.temperature)
+      ? (initialStatus.temperature as number)
+      : 20;
+    tempChar.updateValue(seed);
+    tempChar
+      .setProps({ minValue: -20, maxValue: 60, minStep: 0.1 })
       .onGet(() => this.getCurrentTemperature());
 
     // Set sane default setpoint ranges up front (protocol allows 10-35C).
@@ -133,7 +144,9 @@ export class AcAccessory {
     if (this.externalTemperature != null) return this.externalTemperature;
     if (this.isRealTemperature(this.status.temperature)) return this.status.temperature;
     if (this.lastValidTemperature != null) return this.lastValidTemperature;
-    return 0;
+    // No real reading yet (e.g. started in FAN/AUTO reporting the sentinel).
+    // Show a neutral room temperature rather than 0 or the characteristic floor.
+    return 20;
   }
 
   /**
@@ -386,5 +399,19 @@ export class AcAccessory {
   /** Turn the whole AC off. */
   turnOff(): void {
     this.send(AcSetPower.OFF, AcSetMode.UNCHANGED, AcFanSpeed.UNCHANGED, null);
+  }
+
+  /** True if the unit is powered on and in DRY mode. */
+  isDryActive(): boolean {
+    const on =
+      this.status.power === AcPower.ON ||
+      this.status.power === AcPower.AWAY_ON ||
+      this.status.power === AcPower.SLEEP;
+    return on && this.status.mode === AcMode.DRY;
+  }
+
+  /** Put the unit into DRY (dehumidify) mode (powers on, sets DRY). */
+  setDry(): void {
+    this.send(AcSetPower.ON, AcSetMode.DRY, AcFanSpeed.UNCHANGED, null);
   }
 }

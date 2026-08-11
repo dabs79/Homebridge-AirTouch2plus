@@ -44,6 +44,12 @@
         "default": true,
         "description": "Adds a separate Fan tile that switches the AC into FAN-only mode (air circulation, no heating/cooling). Turning it on sets FAN mode; turning it off turns the AC off. Useful for overnight air circulation."
       },
+      "exposeDryMode": {
+        "title": "Expose Dry Mode",
+        "type": "boolean",
+        "default": true,
+        "description": "Adds a separate tile that switches the AC into DRY (dehumidify) mode. Turning it on sets DRY mode; turning it off turns the AC off."
+      },
       "pollIntervalSeconds": {
         "title": "Poll Interval (seconds)",
         "type": "integer",

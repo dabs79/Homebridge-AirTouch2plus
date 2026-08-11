@@ -14,6 +14,8 @@ export interface AirTouchPlatformConfig {
   exposeFanSpeed?: boolean;
   /** Expose a separate Fan tile that switches the AC into FAN-only mode (air circulation). Default true. */
   exposeFanMode?: boolean;
+  /** Expose a separate tile that switches the AC into DRY (dehumidify) mode. Default true. */
+  exposeDryMode?: boolean;
   /** Minimum seconds between polling refreshes. Default 60. */
   pollIntervalSeconds?: number;
   /** Temperature step for setpoint. Default 0.5. */

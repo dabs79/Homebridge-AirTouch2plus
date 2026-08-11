@@ -13,7 +13,7 @@ import { At2PlusClient, AT2PLUS_PORT, Logger } from './protocol/client';
 import { AcAccessory } from './acAccessory';
 import { ZoneAccessory } from './zoneAccessory';
 import { FanSpeedAccessory } from './fanSpeedAccessory';
-import { FanModeAccessory } from './fanModeAccessory';
+import { ModeAccessory } from './modeAccessory';
 import type { AcStatus, GroupStatus, AcAbility } from './protocol/messages';
 
 export class AirTouchPlatform implements DynamicPlatformPlugin {
@@ -27,7 +27,8 @@ export class AirTouchPlatform implements DynamicPlatformPlugin {
   private readonly acAccessories = new Map<number, AcAccessory>();
   private readonly zoneAccessories = new Map<number, ZoneAccessory>();
   private readonly fanSpeedAccessories = new Map<number, FanSpeedAccessory>();
-  private readonly fanModeAccessories = new Map<number, FanModeAccessory>();
+  private readonly fanModeAccessories = new Map<number, ModeAccessory>();
+  private readonly dryModeAccessories = new Map<number, ModeAccessory>();
   private readonly pendingAbility = new Set<number>();
   private readonly groupNames = new Map<number, string>();
   private pollTimer?: NodeJS.Timeout;
@@ -161,9 +162,22 @@ export class AirTouchPlatform implements DynamicPlatformPlugin {
           );
           this.fanModeAccessories.set(
             ability.acId,
-            new FanModeAccessory(this, fanModeAcc, acc, acName),
+            new ModeAccessory(this, fanModeAcc, acc, acName, 'fan'),
           );
           this.log.info(`Added fan-only control for AC ${ability.acId}`);
+        }
+        // Companion Dry tile: switches the AC into DRY (dehumidify) mode.
+        if (this.config.exposeDryMode !== false && !this.dryModeAccessories.has(ability.acId)) {
+          const acName = ability.name || `AC ${ability.acId}`;
+          const dryModeAcc = this.getOrCreatePlatformAccessory(
+            `at2p-drymode-${ability.acId}`,
+            `${acName} Dry`,
+          );
+          this.dryModeAccessories.set(
+            ability.acId,
+            new ModeAccessory(this, dryModeAcc, acc, acName, 'dry'),
+          );
+          this.log.info(`Added dry-mode control for AC ${ability.acId}`);
         }
       }
     }
