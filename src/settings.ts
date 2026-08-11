@@ -10,6 +10,8 @@ export interface AirTouchPlatformConfig {
   port?: number;
   /** Expose each zone (group) as a Fan accessory with damper control. Default true. */
   exposeZones?: boolean;
+  /** Expose a separate Fan tile for AC fan speed (Apple Home can't show it on the AC tile). Default true. */
+  exposeFanSpeed?: boolean;
   /** Minimum seconds between polling refreshes. Default 60. */
   pollIntervalSeconds?: number;
   /** Temperature step for setpoint. Default 0.5. */

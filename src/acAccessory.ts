@@ -24,6 +24,7 @@ export class AcAccessory {
   private service: Service;
   private status: AcStatus;
   private ability?: AcAbility;
+  private readonly statusListeners: Array<() => void> = [];
 
   constructor(
     private readonly platform: AirTouchPlatform,
@@ -99,6 +100,8 @@ export class AcAccessory {
         this.service.updateCharacteristic(target, status.setPoint);
       }
     }
+    // Notify companion accessories (e.g. the fan-speed accessory).
+    for (const cb of this.statusListeners) cb();
   }
 
   /** Called once the AC ability is known: configure setpoint ranges & valid modes. */
@@ -287,5 +290,34 @@ export class AcAccessory {
   private async setRotationSpeed(value: CharacteristicValue): Promise<void> {
     const speed = this.speedFromPercent(Number(value));
     this.send(AcSetPower.UNCHANGED, AcSetMode.UNCHANGED, speed, null);
+  }
+
+  // ---------------- public fan-speed API (used by FanSpeedAccessory) ----------------
+
+  /** The list of manual fan speeds this unit supports, in ascending order. */
+  getSupportedManualSpeeds(): AcFanSpeed[] {
+    const speeds = this.ability?.supportedFanSpeeds?.filter((s) => s !== AcFanSpeed.AUTO);
+    if (speeds && speeds.length) return [...speeds].sort((a, b) => a - b);
+    return [AcFanSpeed.LOW, AcFanSpeed.MEDIUM, AcFanSpeed.HIGH];
+  }
+
+  /** Current fan speed as reported by the unit. */
+  getCurrentFanSpeed(): AcFanSpeed {
+    return this.status.fanSpeed;
+  }
+
+  /** Whether the unit is currently on AUTO fan speed. */
+  isFanAuto(): boolean {
+    return this.status.fanSpeed === AcFanSpeed.AUTO;
+  }
+
+  /** Set a specific fan speed (does not change power/mode/setpoint). */
+  setFanSpeed(speed: AcFanSpeed): void {
+    this.send(AcSetPower.UNCHANGED, AcSetMode.UNCHANGED, speed, null);
+  }
+
+  /** Register a callback fired whenever this AC's status updates. */
+  onStatusUpdate(cb: () => void): void {
+    this.statusListeners.push(cb);
   }
 }
