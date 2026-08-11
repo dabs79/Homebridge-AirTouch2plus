@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # homebridge-airtouch2plus
 
 A [Homebridge](https://homebridge.io) plugin for the **Polyaire AirTouch 2+** ducted air conditioning controller.
@@ -86,3 +87,7 @@ Protocol reverse-engineering and the reference implementation are the work of **
 ## License
 
 MIT
+=======
+# Homebridge-AirTouch2plus
+HomeBridge plugin for AirTouch2+ AC Controllers
+>>>>>>> 562008a61f898ed8babc33ced3317357d2dfe79a

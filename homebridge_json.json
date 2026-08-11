@@ -1,0 +1,75 @@
+{
+    "bridge": {
+        "name": "Homebridge 3C97",
+        "username": "0E:FC:D5:66:3C:97",
+        "port": 51016,
+        "pin": "191-77-223",
+        "advertiser": "ciao",
+        "matter": {
+            "port": 5530,
+            "enabled": false
+        },
+        "bind": [
+            "Ethernet"
+        ]
+    },
+    "accessories": [],
+    "platforms": [
+        {
+            "name": "Config",
+            "platform": "config",
+            "port": 8581,
+            "lightingMode": "dark",
+            "accessoryControl": {
+                "debug": true
+            },
+            "plugins": {
+                "hideUpdatesFor": [
+                    "homebridge-airtouch2plus-platform"
+                ]
+            }
+        },
+        {
+            "platform": "Airtouch2",
+            "name": "AirTouch 2+",
+            "ipAddress": "192.168.68.58",
+            "port": 9200,
+            "pollingInterval": 5000,
+            "manufacturer": "Daikin",
+            "model": "FBA140B-VCV",
+            "fan": [
+                "LOW",
+                "MEDIUM",
+                "HIGH"
+            ],
+            "zones": [
+                {
+                    "id": 1,
+                    "name": "Lounge"
+                },
+                {
+                    "id": 2,
+                    "name": "Kids"
+                },
+                {
+                    "id": 3,
+                    "name": "Master"
+                }
+            ],
+            "groups": [
+                {
+                    "id": 1,
+                    "name": "Lounge"
+                },
+                {
+                    "id": 2,
+                    "name": "Kids"
+                },
+                {
+                    "id": 3,
+                    "name": "Master"
+                }
+            ]
+        }
+    ]
+}
